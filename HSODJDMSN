@@ -219,7 +219,7 @@ local function RandomAnimation(ImageLabel, startX, moveDistance, moveDuration)
     local animations = {
         {func = function() return SmallJump(ImageLabel, 0.03, 0.4) end, weight = 0.3}, -- Lompatan kecil (30%)
         {func = function() return Shiver(ImageLabel, 0.005, 0.05) end, weight = 0.2}, -- Mengigil (20%)
-        {func = function() return LayDown(ImageLabel, 3, 5) end, weight = 0.2}, -- Tiduran (20%)
+        {func = function() return LayDown(ImageLabel, 3) end, weight = 0.1}, -- Tiduran
         {func = function() return LookAround(ImageLabel, 1) end, weight = 0.2}, -- Melihat sekitar (20%)
         {func = function() return nil end, weight = 0.1} -- Pause (10%)
     }
@@ -271,8 +271,8 @@ end
 -- Membuat dan mengatur GIFs
 local spacing = 0.2  -- Jarak antar GIF
 local baseY = 0.92   -- Sejajar dengan timer
-local moveDistance = 0.05 -- Jarak gerakan kiri-kanan
-local moveDuration = 2    -- Durasi gerakan satu arah
+local moveDistance = 0.1 -- Jarak gerakan kiri-kanan
+local moveDuration = 4    -- Durasi gerakan satu arah
 local baseSize = 25       -- Ukuran dasar GIF
 
 for i, gif in ipairs(AnimeGifs) do
