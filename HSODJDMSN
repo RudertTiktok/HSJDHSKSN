@@ -1,0 +1,361 @@
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+-- Variabel untuk posisi kiri bawah
+local BOTTOM_LEFT_POSITION = {
+    Timer = UDim2.new(0.05, 0, 0.92, 0), -- Timer sedikit lebih bawah
+}
+
+local AnimeGifs = {
+    {
+        ImageID = "rbxassetid://74080484918102",
+        Width = 60,
+        Height = 40,
+        Rows = 2,
+        Columns = 3,
+        NumberOfFrames = 5,
+        FPS = 10,
+        Description = "Pixel character walking"
+    },
+    {
+        ImageID = "rbxassetid://12629181980",
+        Width = 512,
+        Height = 512,
+        Rows = 1,
+        Columns = 1,
+        NumberOfFrames = 1,
+        FPS = 0,
+        Description = "Custom animation 1"
+    },
+    {
+        ImageID = "rbxassetid://4772021302",
+        Width = 4096,
+        Height = 4096,
+        Rows = 1,
+        Columns = 1,
+        NumberOfFrames = 1,
+        FPS = 0,
+        Description = "Custom animation 2"
+    },
+    {
+        ImageID = "rbxassetid://10867107499", -- ID baru: ~15 frame
+        Width = 64,
+        Height = 64,
+        Rows = 4, -- Asumsi 4x4 untuk ~15 frame
+        Columns = 4,
+        NumberOfFrames = 15, -- Sesuai petunjukmu (sekitar 15 frame)
+        FPS = 15,
+        Description = "Custom animation 3"
+    }
+}
+
+-- Buat ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.Players.LocalPlayer.PlayerGui
+
+-- Frame untuk Timer
+local TimerFrame = Instance.new("Frame")
+TimerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TimerFrame.BackgroundTransparency = 0.5
+TimerFrame.BorderSizePixel = 0
+TimerFrame.Position = BOTTOM_LEFT_POSITION.Timer
+TimerFrame.Size = UDim2.new(0, 90, 0, 24)
+TimerFrame.Parent = ScreenGui
+
+-- Efek bayangan dengan UIStroke
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(255, 255, 255)
+UIStroke.Transparency = 0.8
+UIStroke.Parent = TimerFrame
+
+-- Tambahkan UIScale untuk responsivitas
+local Scale = Instance.new("UIScale")
+Scale.Scale = 1
+Scale.Parent = TimerFrame
+
+-- Timer Label dengan font Damion
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+TimerLabel.BackgroundTransparency = 1
+TimerLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+TimerLabel.Size = UDim2.new(0.9, 0, 0.8, 0)
+TimerLabel.FontFace = Font.new("rbxassetid://12187607722", Enum.FontWeight.Regular)
+TimerLabel.Text = "00:00"
+TimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimerLabel.TextScaled = true
+TimerLabel.TextSize = 14
+TimerLabel.Parent = TimerFrame
+
+-- Ikon jam
+local TimerIcon = Instance.new("ImageLabel")
+TimerIcon.BackgroundTransparency = 0.5
+TimerIcon.Size = UDim2.new(0, 20, 0, 20)
+TimerIcon.Position = UDim2.new(0.05 - 0.035, 0, 0.92, 0)
+TimerIcon.Image = "rbxassetid://10590477450"
+TimerIcon.Parent = ScreenGui
+
+-- Pemeriksaan apakah ikon dimuat
+local success, err = pcall(function()
+    local testImage = Instance.new("ImageLabel")
+    testImage.Image = TimerIcon.Image
+    testImage:Destroy()
+end)
+if not success then
+    warn("Ikon jam (rbxassetid://10590477450) gagal dimuat: " .. tostring(err) .. ". Coba gunakan ID alternatif seperti rbxassetid://60658772.")
+    TimerIcon.Image = "rbxassetid://60658772"
+end
+
+-- Efek bayangan pada ikon
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Thickness = 1
+IconStroke.Color = Color3.fromRGB(255, 255, 255)
+IconStroke.Transparency = 0.9
+IconStroke.Parent = TimerIcon
+
+-- Animasi putar untuk ikon
+local rotateTween = TweenService:Create(TimerIcon, TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
+rotateTween:Play()
+
+-- Fungsi animasi GIF
+local function AnimateGif(ImageLabel, Width, Height, Rows, Columns, NumberOfFrames, ImageID, FPS)
+if ImageID then ImageLabel.Image = ImageID end
+    if FPS <= 0 or NumberOfFrames <= 1 then
+        ImageLabel.ImageRectSize = Vector2.new(Width, Height)
+        ImageLabel.ImageRectOffset = Vector2.new(0, 0)
+        return
+    end
+    local RobloxMaxImageSize = 4096
+    local RealWidth, RealHeight = Width, Height
+    if math.max(Width, Height) > RobloxMaxImageSize then
+        local Longest = Width > Height and "Width" or "Height"
+        if Longest == "Width" then
+            RealWidth = RobloxMaxImageSize
+            RealHeight = (RealWidth / Width) * Height
+        else
+            RealHeight = RobloxMaxImageSize
+            RealWidth = (RealHeight / Height) * Width
+        end
+    end
+    local FrameSize = Vector2.new(RealWidth / Columns, RealHeight / Rows)
+    ImageLabel.ImageRectSize = FrameSize
+    local Offsets = {}
+    local CurrentRow, CurrentColumn = 0, 0
+    for i = 1, NumberOfFrames do
+        local CurrentX = CurrentColumn * FrameSize.X
+        local CurrentY = CurrentRow * FrameSize.Y
+        table.insert(Offsets, Vector2.new(CurrentX, CurrentY))
+        CurrentColumn += 1
+        if CurrentColumn >= Columns then
+            CurrentColumn = 0
+            CurrentRow += 1
+        end
+    end
+    local TimeInterval = 1 / FPS
+    local Index = 0
+    task.spawn(function()
+        while task.wait(TimeInterval) and ImageLabel:IsDescendantOf(game) do
+            Index = (Index % NumberOfFrames) + 1
+            ImageLabel.ImageRectOffset = Offsets[Index]
+        end
+    end)
+end
+
+-- Fungsi animasi gerakan kiri-kanan
+local function MoveSideToSide(ImageLabel, startX, moveDistance, duration)
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+    local tween = TweenService:Create(ImageLabel, tweenInfo, {Position = UDim2.new(startX + moveDistance, 0, ImageLabel.Position.Y.Scale, 0)})
+    tween:Play()
+    return tween
+end
+
+-- Fungsi animasi lompatan kecil
+local function SmallJump(ImageLabel, jumpHeight, duration)
+    local originalY = ImageLabel.Position.Y.Scale
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true)
+    local tween = TweenService:Create(ImageLabel, tweenInfo, {Position = UDim2.new(ImageLabel.Position.X.Scale, 0, originalY - jumpHeight, 0)})
+    tween:Play()
+    return tween
+end
+
+-- Fungsi animasi mengigil
+local function Shiver(ImageLabel, intensity, duration)
+    local originalX = ImageLabel.Position.X.Scale
+    local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 3, true)
+    local tween = TweenService:Create(ImageLabel, tweenInfo, {Position = UDim2.new(originalX + intensity, 0, ImageLabel.Position.Y.Scale, 0)})
+    tween:Play()
+    return tween
+end
+
+-- Fungsi animasi tiduran
+local function LayDown(ImageLabel, duration)
+    local originalY = ImageLabel.Position.Y.Scale
+    local originalRotation = ImageLabel.Rotation
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true)
+    local tween = TweenService:Create(ImageLabel, tweenInfo, {
+        Position = UDim2.new(ImageLabel.Position.X.Scale, 0, originalY + 0.03, 0), -- Sedikit turun
+        Rotation = 90 -- Berbaring ke samping
+    })
+    tween:Play()
+    return tween
+end
+
+-- Fungsi animasi melihat sekitar
+local function LookAround(ImageLabel, duration)
+    local originalRotation = ImageLabel.Rotation
+    local tweenInfo = TweenInfo.new(duration / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true)
+    local tween1 = TweenService:Create(ImageLabel, tweenInfo, {Rotation = originalRotation + 15}) -- Lihat kanan
+    local tween2 = TweenService:Create(ImageLabel, tweenInfo, {Rotation = originalRotation - 15}) -- Lihat kiri
+    tween1:Play()
+    tween1.Completed:Connect(function()
+        tween2:Play()
+    end)
+    return tween2
+end
+
+-- Fungsi untuk memilih animasi secara acak
+local function RandomAnimation(ImageLabel, startX, moveDistance, moveDuration)
+    local animations = {
+        {func = function() return SmallJump(ImageLabel, 0.03, 0.4) end, weight = 0.3}, -- Lompatan kecil (30%)
+        {func = function() return Shiver(ImageLabel, 0.005, 0.05) end, weight = 0.2}, -- Mengigil (20%)
+        {func = function() return LayDown(ImageLabel, 3, 5) end, weight = 0.2}, -- Tiduran (20%)
+        {func = function() return LookAround(ImageLabel, 1) end, weight = 0.2}, -- Melihat sekitar (20%)
+        {func = function() return nil end, weight = 0.1} -- Pause (10%)
+    }
+    
+    -- Pilih animasi berdasarkan bobot
+    local totalWeight = 0
+    for _, anim in ipairs(animations) do
+        totalWeight = totalWeight + anim.weight
+    end
+    local randomValue = math.random() * totalWeight
+    local currentWeight = 0
+    local selectedAnimation
+    for _, anim in ipairs(animations) do
+        currentWeight = currentWeight + anim.weight
+        if randomValue <= currentWeight then
+            selectedAnimation = anim.func
+            break
+        end
+    end
+    
+    -- Hentikan animasi kiri-kanan sementara
+    local sideTween = MoveSideToSide(ImageLabel, startX, moveDistance, moveDuration)
+    sideTween:Pause()
+    
+    -- Jalankan animasi acak
+    local animTween = selectedAnimation()
+    
+    -- Tunggu animasi selesai, lalu lanjutkan gerakan kiri-kanan
+    if animTween then
+        animTween.Completed:Connect(function()
+            -- Kembalikan rotasi ke 0 jika diperlukan (misalnya setelah tiduran)
+            if ImageLabel.Rotation ~= 0 then
+                local resetTween = TweenService:Create(ImageLabel, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {Rotation = 0})
+                resetTween:Play()
+                resetTween.Completed:Connect(function()
+                    sideTween:Play()
+                end)
+            else
+                sideTween:Play()
+            end
+        end)
+    else
+        -- Jika pause, tunggu 0.5-1.5 detik sebelum lanjut
+        wait(math.random(0.5, 1.5))
+        sideTween:Play()
+    end
+end
+
+-- Membuat dan mengatur GIFs
+local spacing = 0.2  -- Jarak antar GIF
+local baseY = 0.92   -- Sejajar dengan timer
+local moveDistance = 0.05 -- Jarak gerakan kiri-kanan
+local moveDuration = 2    -- Durasi gerakan satu arah
+local baseSize = 25       -- Ukuran dasar GIF
+
+for i, gif in ipairs(AnimeGifs) do
+    -- Periksa apakah ImageID valid
+    local success, err = pcall(function()
+        local testImage = Instance.new("ImageLabel")
+        testImage.Image = gif.ImageID
+        testImage:Destroy()
+    end)
+    if not success then
+        warn("GIF " .. gif.Description .. " gagal dimuat (ID: " .. gif.ImageID .. "): " .. tostring(err) .. ". Ganti dengan ID aset gambar yang valid.")
+        continue
+    end
+
+    local Cat = Instance.new("ImageLabel")
+    Cat.Name = "Cat_" .. gif.Description
+    Cat.BackgroundTransparency = 1
+    local aspectRatio = gif.Width / gif.Height
+    local height = baseSize
+    local width = height * aspectRatio
+    Cat.Size = UDim2.new(0, width, 0, height)
+    Cat.Position = UDim2.new(0.15 + (i - 1) * spacing, 0, baseY, 0)
+    Cat.ZIndex = 3
+    Cat.Image = gif.ImageID
+    Cat.Parent = ScreenGui
+
+    -- Animasi GIF
+    AnimateGif(Cat, gif.Width, gif.Height, gif.Rows, gif.Columns, gif.NumberOfFrames, gif.ImageID, gif.FPS)
+    
+    -- Mulai animasi kiri-kanan dan animasi acak
+    local startX = 0.15 + (i - 1) * spacing
+    MoveSideToSide(Cat, startX, moveDistance, moveDuration)
+    
+    -- Jalankan animasi acak setiap 3-8 detik
+    task.spawn(function()
+        while true do
+            wait(math.random(3, 8))
+            if Cat:IsDescendantOf(game) then
+                RandomAnimation(Cat, startX, moveDistance, moveDuration)
+            else
+                break
+            end
+        end
+    end)
+end
+
+-- Timer update
+local startTime = os.time()
+local function formatTime(seconds)
+    local minutes = math.floor(seconds / 60)
+    local secs = seconds % 60
+    return string.format("%02d:%02d", minutes, secs)
+end
+local function updateTextSmoothly(newText)
+    local fadeOutInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local fadeInInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    local scaleInfo = TweenInfo.new(0.2, Enum.EasingStyle.Elastic, Enum.EasingDirection.InOut)
+    
+    local fadeOut = TweenService:Create(TimerLabel, fadeOutInfo, {TextTransparency = 1})
+    local scaleDown = TweenService:Create(TimerLabel, scaleInfo, {Size = UDim2.new(0.9, -5, 0.8, -2)})
+    fadeOut:Play()
+    scaleDown:Play()
+    
+    fadeOut.Completed:Connect(function()
+        TimerLabel.Text = newText
+        local fadeIn = TweenService:Create(TimerLabel, fadeInInfo, {TextTransparency = 0})
+        local scaleUp = TweenService:Create(TimerLabel, scaleInfo, {Size = UDim2.new(0.9, 0, 0.8, 0)})
+        fadeIn:Play()
+        scaleUp:Play()
+    end)
+end
+task.spawn(function()
+    while true do
+        local elapsedTime = os.time() - startTime
+        local color = Color3.fromRGB(255, 255, 255)
+        if elapsedTime > 300 then
+            color = Color3.fromRGB(255, 255, 0)
+        elseif elapsedTime > 600 then
+            color = Color3.fromRGB(255, 0, 0)
+        end
+        local colorTween = TweenService:Create(TimerLabel, TweenInfo.new(0.5), {TextColor3 = color})
+        colorTween:Play()
+        updateTextSmoothly(formatTime(elapsedTime))
+        task.wait(1)
+    end
+end)
